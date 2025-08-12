@@ -1,0 +1,93 @@
+.game-layout {
+  display: grid;
+  grid-template-areas:
+    "top top top"
+    "left center right"
+    "me me me";
+  grid-template-rows: 1fr 2fr 1.5fr;
+  grid-template-columns: 1fr 2fr 1fr;
+  height: 100vh;
+  gap: 10px;
+}
+
+.opponent {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #222;
+  color: white;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.top {
+  grid-area: top;
+}
+
+.left {
+  grid-area: left;
+}
+
+.right {
+  grid-area: right;
+}
+
+.me {
+  grid-area: me;
+  text-align: center;
+}
+
+.table-center {
+  grid-area: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.message{
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.63);
+  width: 100vw;
+  height: 100vh;
+  top: 0;
+  left: 0;
+  color: white;
+  font-size: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.card {
+  padding: 20px;
+  border-radius: 8px;
+  color: white;
+  font-size: 20px;
+}
+
+.card.RED {
+  background: crimson;
+}
+.card.BLUE {
+  background: dodgerblue;
+}
+.card.GREEN {
+  background: seagreen;
+}
+.card.YELLOW {
+  background: gold;
+  color: black;
+}
+
+.card.buyCards{
+  background-color: black;
+  color: white;
+}
+
+.hand {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
