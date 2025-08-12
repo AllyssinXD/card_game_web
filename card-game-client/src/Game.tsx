@@ -15,8 +15,9 @@ interface Card {
 }
 
 function Game({ username }: { username: string }) {
+  console.log(import.meta.env.VITE_API_URL);
   const { sendJsonMessage, lastJsonMessage } = useWebSocket(
-    "ws://127.0.0.1:8000",
+    import.meta.env.VITE_API_URL,
     { queryParams: { username } }
   );
 
