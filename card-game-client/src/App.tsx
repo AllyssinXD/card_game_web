@@ -1,23 +1,19 @@
-import { useState } from "react";
-import "./App.css";
-import Game from "./Game";
+import { Application } from "@pixi/react";
+import { useRef } from "react";
+import { Scenes, type SceneKey } from "./Scenes";
+import useGame from "./hooks/useGame";
 
 function App() {
-  const [username, setUsername] = useState("");
-  const [inGame, setInGame] = useState(false);
+  const resizeRef = useRef<HTMLDivElement>(null);
+  const game = useGame();
+  const CurrentScene = Scenes[game!.scene as SceneKey];
 
-  return inGame ? (
-    <Game username={username} />
-  ) : (
-    <>
-      <input
-        value={username}
-        onChange={(e) => {
-          setUsername(e.currentTarget.value);
-        }}
-      />
-      <button onClick={() => setInGame(true)}>Entrar</button>
-    </>
+  return (
+    <div className="w-full h-screen" ref={resizeRef}>
+      <Application autoStart roundPixels resizeTo={resizeRef} antialias={false}>
+        <CurrentScene />
+      </Application>
+    </div>
   );
 }
 
