@@ -60,7 +60,7 @@ function GameContextProvider({ children }: { children: ReactNode }) {
       share: true, // permite reuso do hook
       shouldReconnect: () => true, // reconecta automaticamente
       queryParams: {
-        username,
+        username: username || "guest",
       },
     }
   );

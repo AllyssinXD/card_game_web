@@ -6,32 +6,36 @@ import type { Container } from "pixi.js";
 import gsap from "gsap";
 import { PixiPlugin } from "gsap/PixiPlugin";
 import type Card from "../types/Card";
+import useViewport from "../hooks/useViewport";
+import useInGameAnimations, {
+  type IdToRef,
+  type useIGAProps,
+} from "../hooks/useInGameAnimations";
 
 // Registra o plugin do GSAP para propriedades do Pixi
 
 gsap.registerPlugin(PixiPlugin);
 
-type ShowingCard = Card & { angle: number };
+export type ShowingCard = Card & { angle: number };
+export type SendingCard = {
+  originX: number;
+  originY: number;
+  desX: number;
+  desY: number;
+  color: Card["color"];
+  num: string;
+  cardData: Card;
+  rotation: number;
+};
 
 function Game() {
   const game = useGame();
+  const viewport = useViewport();
 
   // Se o hook ainda não retornou nada, evita render e erros
   if (!game || !game.gameState) return null;
 
   const { gameState, actions, myId } = game;
-
-  // Dimensões reativas (em vez de usar window.* diretamente)
-  const [viewport, setViewport] = useState({
-    w: window.innerWidth,
-    h: window.innerHeight,
-  });
-  useEffect(() => {
-    const onResize = () =>
-      setViewport({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
 
   // Índices/entidades derivadas com memo para evitar recomputo e estados redundantes
   const playerIndex = useMemo(
@@ -42,6 +46,10 @@ function Game() {
   // Assumindo jogo 1x1. Se for multiplayer, ajuste a lógica para escolher oponente(s).
   const adversary = useMemo(
     () => gameState.players.find((p) => p.id !== myId) ?? null,
+    [gameState.players, myId]
+  );
+  const player = useMemo(
+    () => gameState.players.find((p) => p.id == myId) ?? null,
     [gameState.players, myId]
   );
 
@@ -76,28 +84,9 @@ function Game() {
     );
   }, [cards.length, playerCardSize, viewport.w]);
 
-  // Tween simples quando o turno muda (levemente destaca a mão do jogador da vez)
-  useEffect(() => {
-    const pc = playerContainer.current;
-    const ac = adversaryContainer.current;
-    if (!pc || !ac) return; // garante que existe antes de animar
-
-    if (turnIndex === playerIndex) {
-      gsap.to(pc, {
-        duration: 0.35,
-        y: viewport.h - 120,
-        ease: "power2.out",
-      });
-      gsap.to(ac, { duration: 0.35, rotation: 0 });
-    } else {
-      gsap.to(pc, {
-        duration: 0.35,
-        y: viewport.h - 100,
-        ease: "power2.out",
-      });
-      gsap.to(ac, { duration: 0.35, rotation: 0 });
-    }
-  }, [turnIndex, playerIndex, viewport.h]);
+  const playersContainersRefs: IdToRef = {};
+  playersContainersRefs[adversary!.id] = adversaryContainer;
+  playersContainersRefs[player!.id] = playerContainer;
 
   // Segurança: evita acessar lastCard se inexistente
   const [lastCard, setLastCard] = useState<Card | null>(
@@ -117,113 +106,24 @@ function Game() {
     return adversaryHover ? total : Math.min(3, total || 3); // mostra 3 por padrão
   }, [adversary, adversaryHover]);
 
-  const [sendingCard, setSendingCard] = useState<{
-    originX: number;
-    originY: number;
-    desX: number;
-    desY: number;
-    color: Card["color"];
-    num: string;
-    cardData: Card;
-    rotation: number;
-  } | null>(null);
-
   const cardsRefs = useRef<Record<string, Container | null>>({});
   const sendingCardRef = useRef<Container>(null);
 
-  useEffect(() => {
-    if (sendingCardRef.current && sendingCard) {
-      const tl = gsap.timeline();
-      if (
-        sendingCard.desX == viewport.w / 2 &&
-        sendingCard.desY == viewport.h / 2
-      ) {
-        tl.to(sendingCardRef.current.scale, {
-          x: 1.5,
-          y: 1.5,
-          duration: 0.5,
-          ease: "power2.inOut",
-        }).to(
-          sendingCardRef.current,
-          {
-            x: sendingCard.desX,
-            y: sendingCard.desY,
-            duration: 0.5,
-            rotation: sendingCard.rotation,
-            ease: "power2.inOut",
-            onComplete: () => {
-              setShowingLastCard({
-                ...sendingCard.cardData,
-                angle: sendingCard.rotation, // mantém no estado
-              });
-              setSendingCard(null);
-            },
-          },
-          "<"
-        );
-        return;
-      }
-
-      tl.to(sendingCardRef.current, {
-        x: sendingCard.desX,
-        y: sendingCard.desY,
-        duration: 0.5,
-        rotation: sendingCard.rotation,
-        ease: "power2.inOut",
-        onComplete: () => {
-          setSendingCard(null);
-        },
-      });
-    }
-  }, [sendingCard]);
+  const IGAProps: useIGAProps = {
+    game,
+    refs: {
+      playersHands: playersContainersRefs,
+    },
+    sendingCardRef,
+    setShowingLastCard,
+  };
+  const { sendingCard, setSendingCard } = useInGameAnimations(IGAProps);
 
   useEffect(() => {
     if (game.gameState.lastCard) {
       setLastCard(game.gameState.lastCard);
     }
   }, [game.gameState.lastCard]);
-
-  useEffect(() => {
-    if (game.lastEvent.startsWith("BUYED_")) {
-      const id = game.lastEvent.substring(6);
-      if (id == adversary?.id) {
-        const secretCard: Card = {
-          color: "UNKNOWN",
-          id: game.lastEvent,
-          num: "?",
-        };
-        setSendingCard({
-          cardData: secretCard,
-          color: secretCard.color,
-          num: secretCard.num,
-          rotation: 0,
-          originX: viewport.w / 2 - 120,
-          originY: viewport.h / 2,
-          desX: viewport.w / 2,
-          desY: 100,
-        });
-      }
-    }
-
-    if (game.lastEvent.startsWith("PLAYED_")) {
-      const params = game.lastEvent.split("_");
-      const playerId = params[1];
-
-      if (playerId != game.myId) {
-        if (!lastCard) return;
-        setSendingCard({
-          cardData: lastCard,
-          color: lastCard.color,
-          num: lastCard.num,
-          rotation: 0,
-          originX: viewport.w / 2 - 120,
-          originY: 100,
-          desX: viewport.w / 2,
-          desY: viewport.h / 2,
-        });
-      }
-    }
-  }, [game.lastEvent]);
 
   return (
     <>
@@ -235,31 +135,40 @@ function Game() {
         ref={adversaryContainer}
         x={viewport.w / 2}
         y={100}
+        anchor={0.5}
       >
-        <Text
-          text={adversary ? adversary.username : "Aguardando..."}
-          y={-70}
-          x={0}
-        />
-        {Array.from({ length: visibleAdversaryCount }).map((_, i, array) => {
-          const isFirst = i === 0;
-          const isLast = i === array.length - 1;
-          const tilt = Math.PI * (turnId === adversary?.id ? 0.01 : -0.01);
-          const rotation = isFirst ? -tilt : isLast ? tilt : 0;
+        <pixiContainer
+          x={
+            adversaryContainer.current
+              ? -(adversaryContainer.current.width / 2)
+              : 0
+          }
+        >
+          <Text
+            text={adversary ? adversary.username : "Aguardando..."}
+            y={-70}
+            x={0}
+          />
+          {Array.from({ length: visibleAdversaryCount }).map((_, i, array) => {
+            const isFirst = i === 0;
+            const isLast = i === array.length - 1;
+            const tilt = Math.PI * (turnId === adversary?.id ? 0.01 : -0.01);
+            const rotation = isFirst ? -tilt : isLast ? tilt : 0;
 
-          return (
-            <pixiContainer key={`adv-${i}`} rotation={rotation}>
-              <CardSprite
-                color={"UNKNOWN"}
-                num={"?"}
-                id={`adv-card-${i}`}
-                x={i * (65 - 30)}
-                y={0}
-                width={65}
-              />
-            </pixiContainer>
-          );
-        })}
+            return (
+              <pixiContainer key={`adv-${i}`} rotation={rotation}>
+                <CardSprite
+                  color={"UNKNOWN"}
+                  num={"?"}
+                  id={`adv-card-${i}`}
+                  x={i * (65 - 30)}
+                  y={0}
+                  width={65}
+                />
+              </pixiContainer>
+            );
+          })}
+        </pixiContainer>
       </pixiContainer>
 
       {/* Mesa (monte e compra) */}
