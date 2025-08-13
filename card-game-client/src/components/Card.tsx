@@ -13,7 +13,6 @@ function CardSprite({
   y,
   color,
   num,
-  id,
   width = 100,
   rotation = 0,
 }: CardProps) {

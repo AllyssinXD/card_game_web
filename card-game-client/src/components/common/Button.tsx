@@ -1,6 +1,5 @@
-import { CanvasTextMetrics, TextStyle } from "pixi.js";
 import type { TextProps } from "./Text";
-import Text, { defaultTextStyle } from "./Text";
+import Text from "./Text";
 import { useState } from "react";
 
 export interface ButtonProps {
@@ -26,10 +25,6 @@ function Button({
   hoverColor,
   onClick,
 }: ButtonProps) {
-  const style = new TextStyle(
-    text.style ? { ...defaultTextStyle, ...text.style } : defaultTextStyle
-  );
-
   const [isHover, setIsHover] = useState(false);
 
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type Ref } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useGame from "../hooks/useGame";
 import CardSprite from "./Card";
 import Text from "./common/Text";
@@ -43,14 +43,6 @@ function Game() {
   const adversary = useMemo(
     () => gameState.players.find((p) => p.id !== myId) ?? null,
     [gameState.players, myId]
-  );
-
-  const adversaryIndex = useMemo(
-    () =>
-      adversary
-        ? gameState.players.findIndex((p) => p.id === adversary.id)
-        : -1,
-    [gameState.players, adversary]
   );
 
   const turnId = gameState.turn;
