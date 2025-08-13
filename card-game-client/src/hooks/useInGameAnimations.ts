@@ -1,5 +1,5 @@
 import type { Container, ContainerChild } from "pixi.js";
-import { useEffect, useState, type Dispatch, type Ref, type RefObject, type SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type RefObject, type SetStateAction } from "react";
 import type { GameContextProps } from "../contexts/GameContext";
 import type { SendingCard, ShowingCard } from "../components/Game";
 import useViewport from "./useViewport";
