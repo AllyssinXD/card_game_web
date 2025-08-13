@@ -7,8 +7,9 @@ import {
   Text,
   TextStyle,
 } from "pixi.js";
+import { PixiTextInputPortal } from "./TextInputPortal";
 
-extend({ Container, Text, Graphics });
+extend({ Container, Graphics, Text });
 
 export function PixiTextInput({
   x,
@@ -28,24 +29,38 @@ export function PixiTextInput({
   const [focused, setFocused] = useState(false);
   const { app } = useApplication();
   const inputBoxRef = useRef<Graphics>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Captura teclado
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (!focused) return;
+  // Centraliza a posição do input HTML na tela (considerando canvas offset)
+  const [inputPos, setInputPos] = useState({ left: 0, top: 0 });
 
-      if (e.key === "Backspace") {
-        setText((t) => t.slice(0, -1));
-      } else if (e.key.length === 1) {
-        setText((t) => t + e.key);
-      }
-    }
+  // Ao focar no Pixi, mostra e posiciona o input HTML e foca nele
+  function handleFocus() {
+    if (!app) return;
+    const rect = app.view.getBoundingClientRect();
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [focused]);
+    setInputPos({
+      left: rect.left + x - width / 2,
+      top: rect.top + y - height / 2,
+    });
 
-  // Detecta clique para focar/desfocar
+    setFocused(true);
+
+    // Deixa o input focado na próxima vez que for renderizado
+    setTimeout(() => inputRef.current?.focus(), 10);
+  }
+
+  // Sincroniza texto do input com estado
+  function onInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setText(e.target.value);
+  }
+
+  // Ao desfocar input HTML, oculta ele também no Pixi
+  function onBlur() {
+    setFocused(false);
+  }
+
+  // Captura clique na área Pixi para focar o input
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (!app) return;
@@ -53,7 +68,6 @@ export function PixiTextInput({
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
-      // Calcular área considerando o centro como referência
       const left = x - width / 2;
       const right = x + width / 2;
       const top = y - height / 2;
@@ -65,63 +79,76 @@ export function PixiTextInput({
         mouseY >= top &&
         mouseY <= bottom
       ) {
-        setFocused(true);
+        handleFocus();
       } else {
         setFocused(false);
       }
     }
+
     window.addEventListener("mousedown", onClick);
     return () => window.removeEventListener("mousedown", onClick);
   }, [app.view, x, y, width, height]);
 
   return (
-    <pixiContainer x={x} y={y}>
-      {/* Caixa do input (centralizada) */}
-      <pixiGraphics
-        ref={inputBoxRef}
-        draw={(g) => {
-          g.clear();
-          g.setStrokeStyle({ width: 2, color: focused ? 0x66ccff : 0x999999 });
-          g.fill(0x222222);
-          // Desenhar com centro no (0,0)
-          g.roundRect(-width / 2, -height / 2, width, height, 6);
-          g.endFill();
-        }}
-      />
-
-      {/* Texto digitado */}
-      <pixiText
-        text={text || "Digite aqui..."}
-        x={-width / 2 + 10} // desloca para começar um pouco à direita
-        y={-height / 2 + 14} // centraliza verticalmente
-        style={
-          new TextStyle({
-            fill: text ? "#ffffff" : "#888888",
-            fontSize: 24,
-            fontFamily: "'Jersey 10', sans serif",
-          })
-        }
-      />
-
-      {/* Cursor */}
-      {focused && (
+    <>
+      <pixiContainer x={x} y={y}>
+        {/* Caixa do input (centralizada) */}
         <pixiGraphics
+          ref={inputBoxRef}
           draw={(g) => {
             g.clear();
-            g.beginFill(0xffffff);
-            const textWidth = CanvasTextMetrics.measureText(
-              text,
-              new TextStyle({
-                fontFamily: "'Jersey 10', sans serif",
-                fontSize: 24,
-              })
-            ).width;
-            const cursorX = -width / 2 + 10 + textWidth;
-            g.drawRect(cursorX, -height / 2 + 14, 2, 28);
+            g.lineStyle(2, focused ? 0x66ccff : 0x999999);
+            g.beginFill(0x222222);
+            g.drawRoundedRect(-width / 2, -height / 2, width, height, 6);
             g.endFill();
           }}
         />
-      )}
-    </pixiContainer>
+
+        {/* Texto digitado */}
+        <pixiText
+          text={text || "Digite aqui..."}
+          x={-width / 2 + 10}
+          y={-height / 2 + 14}
+          style={
+            new TextStyle({
+              fill: text ? "#ffffff" : "#888888",
+              fontSize: 24,
+              fontFamily: "'Jersey 10', sans serif",
+            })
+          }
+        />
+
+        {/* Cursor */}
+        {focused && (
+          <pixiGraphics
+            draw={(g) => {
+              g.clear();
+              g.beginFill(0xffffff);
+              const textWidth = CanvasTextMetrics.measureText(
+                text,
+                new TextStyle({
+                  fontFamily: "'Jersey 10', sans serif",
+                  fontSize: 24,
+                })
+              ).width;
+              const cursorX = -width / 2 + 10 + textWidth;
+              g.drawRect(cursorX, -height / 2 + 14, 2, 28);
+              g.endFill();
+            }}
+          />
+        )}
+      </pixiContainer>
+      {/* Input HTML fora do Pixi via portal */}
+      <PixiTextInputPortal
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        text={text}
+        setText={setText}
+        focused={focused}
+        setFocused={setFocused}
+      />
+    </>
   );
 }

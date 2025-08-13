@@ -1,4 +1,4 @@
-import { Text as PixiText, type TextStyle } from "pixi.js";
+import { Text as PixiText, TextStyle } from "pixi.js";
 import type { Ref } from "react";
 
 export interface TextProps {
@@ -19,14 +19,14 @@ export const defaultTextStyle = {
 } as TextStyle;
 
 function Text({ text, pixiRef, size, style, ...rest }: TextProps) {
+  let textStyle = { ...style, ...defaultTextStyle };
+  if (size) textStyle.fontSize = size;
   return (
     <pixiText
+      anchor={0.5}
       ref={pixiRef}
       text={text}
-      style={{
-        ...defaultTextStyle,
-        ...style,
-      }}
+      style={textStyle}
       {...rest}
     />
   );

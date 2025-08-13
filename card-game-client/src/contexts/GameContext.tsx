@@ -7,30 +7,42 @@ import {
 } from "react";
 import useWebSocket from "react-use-websocket";
 import type { SendJsonMessage } from "react-use-websocket/dist/lib/types";
+import type { Player } from "../types/Player";
 
 export interface GameContextProps {
   scene: string;
-  wsLastMsg: string;
+  wsLastMsg: any;
   isInGame: boolean;
   setScene: (scene: string) => void;
   sendJsonMessage: SendJsonMessage;
   setUsername: React.Dispatch<SetStateAction<string>>;
+  gameState: GameState;
 }
+
+export interface GameState {
+  players: Player[];
+}
+
 export const GameContext = createContext<GameContextProps | null>(null);
 function GameContextProvider({ children }: { children: ReactNode }) {
   const [scene, setScene] = useState("MainMenu");
-  const [wsLastMsg, setLastMessage] = useState<any>();
   const [socketUrl, setSocketUrl] = useState<string | null>("");
   const [isInGame, setIsInGame] = useState(false);
   const [username, setUsername] = useState("guest");
-
-  const { sendJsonMessage, lastJsonMessage } = useWebSocket(socketUrl, {
-    share: true, // permite reuso do hook
-    shouldReconnect: () => true, // reconecta automaticamente
-    queryParams: {
-      username,
-    },
+  const [gameState, setGameState] = useState<GameState>({
+    players: [],
   });
+
+  const { sendJsonMessage, lastJsonMessage: wsLastMsg } = useWebSocket(
+    socketUrl,
+    {
+      share: true, // permite reuso do hook
+      shouldReconnect: () => true, // reconecta automaticamente
+      queryParams: {
+        username,
+      },
+    }
+  );
 
   useEffect(() => {
     if (scene === "Lobby") {
@@ -43,14 +55,21 @@ function GameContextProvider({ children }: { children: ReactNode }) {
   }, [scene]);
 
   useEffect(() => {
-    if (lastJsonMessage) {
-      setLastMessage(JSON.stringify(lastJsonMessage));
+    const res = wsLastMsg as any;
+    if (res) {
+      console.log(res);
+      if (res.players)
+        setGameState((prev) => ({
+          ...prev,
+          players: res.players,
+        }));
     }
-  }, [lastJsonMessage]);
+  }, [wsLastMsg]);
 
   return (
     <GameContext.Provider
       value={{
+        gameState,
         scene,
         setScene,
         wsLastMsg,

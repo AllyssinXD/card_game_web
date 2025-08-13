@@ -1,4 +1,4 @@
-import Lobby from "./components/Game";
+import Lobby from "./components/Lobby";
 import MainMenu from "./components/MainMenu";
 
 export const Scenes = {

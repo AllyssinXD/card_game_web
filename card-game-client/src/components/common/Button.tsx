@@ -30,18 +30,14 @@ function Button({
     text.style ? { ...defaultTextStyle, ...text.style } : defaultTextStyle
   );
 
-  const measuredSize = CanvasTextMetrics.measureText(text.text, style);
-  const textWidth = measuredSize.width;
-  const textHeight = measuredSize.height;
-
   const [isHover, setIsHover] = useState(false);
 
   return (
     <pixiContainer
       interactive
-      onMouseOver={() => setIsHover(true)}
-      onMouseLeave={() => setIsHover(false)}
-      onClick={onClick}
+      onPointerEnter={() => setIsHover(true)}
+      onPointerLeave={() => setIsHover(false)}
+      onPointerDown={onClick}
     >
       <pixiGraphics
         draw={(g) => {
@@ -53,7 +49,7 @@ function Button({
         }}
         zIndex={0}
       />
-      <Text x={x - textWidth / 2} y={y - textHeight / 2} {...text} zIndex={1} />
+      <Text x={x} y={y} {...text} zIndex={1} />
     </pixiContainer>
   );
 }
