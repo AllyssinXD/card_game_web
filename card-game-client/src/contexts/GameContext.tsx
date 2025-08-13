@@ -8,6 +8,13 @@ import {
 import useWebSocket from "react-use-websocket";
 import type { SendJsonMessage } from "react-use-websocket/dist/lib/types";
 import type { Player } from "../types/Player";
+import type Card from "../types/Card";
+
+export interface GameActions {
+  start: () => void;
+  playCard: (id: string) => void;
+  buyCard: () => void;
+}
 
 export interface GameContextProps {
   scene: string;
@@ -17,10 +24,18 @@ export interface GameContextProps {
   sendJsonMessage: SendJsonMessage;
   setUsername: React.Dispatch<SetStateAction<string>>;
   gameState: GameState;
+  myId: string | null;
+  actions: GameActions;
 }
 
 export interface GameState {
+  gameState: string;
+  lastCard: Card | null;
+  turn: string;
   players: Player[];
+  state: {
+    cards: Card[];
+  };
 }
 
 export const GameContext = createContext<GameContextProps | null>(null);
@@ -29,9 +44,13 @@ function GameContextProvider({ children }: { children: ReactNode }) {
   const [socketUrl, setSocketUrl] = useState<string | null>("");
   const [isInGame, setIsInGame] = useState(false);
   const [username, setUsername] = useState("guest");
-  const [gameState, setGameState] = useState<GameState>({
-    players: [],
-  });
+  // Estados separados para o game
+  const [gamePhase, setGamePhase] = useState<string>("STOP"); // antes gameState.gameState
+  const [lastCard, setLastCard] = useState<Card | null>(null);
+  const [turn, setTurn] = useState<string>("");
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [myId, setMyId] = useState<string | null>(null);
 
   const { sendJsonMessage, lastJsonMessage: wsLastMsg } = useWebSocket(
     socketUrl,
@@ -44,8 +63,20 @@ function GameContextProvider({ children }: { children: ReactNode }) {
     }
   );
 
+  const start = () => {
+    sendJsonMessage({ action: "START_GAME" });
+  };
+
+  const playCard = (cardId: string) => {
+    sendJsonMessage({ action: "PLAY_" + cardId });
+  };
+
+  const buyCard = () => {
+    sendJsonMessage({ action: "BUY" });
+  };
+
   useEffect(() => {
-    if (scene === "Lobby") {
+    if (scene === "Lobby" || scene === "Game") {
       setSocketUrl(import.meta.env.VITE_API_URL); // sua URL de WS
       setIsInGame(true);
     } else {
@@ -55,21 +86,43 @@ function GameContextProvider({ children }: { children: ReactNode }) {
   }, [scene]);
 
   useEffect(() => {
+    if (!wsLastMsg) return;
+
     const res = wsLastMsg as any;
-    if (res) {
-      console.log(res);
-      if (res.players)
-        setGameState((prev) => ({
-          ...prev,
-          players: res.players,
-        }));
+
+    if (res.yourId) {
+      setMyId(res.yourId);
     }
+
+    if (res.gameState) setGamePhase(res.gameState);
+    if ("lastCard" in res) setLastCard(res.lastCard);
+    if ("turn" in res) setTurn(res.turn);
+    if ("players" in res) setPlayers(res.players);
+    if (res.state?.cards) setCards(res.state.cards);
   }, [wsLastMsg]);
+
+  useEffect(() => {
+    if (gamePhase === "GOING") {
+      setScene("Game");
+    } else if (gamePhase === "WAITING_PLAYERS") {
+      setScene("Lobby");
+    }
+  }, [gamePhase]);
 
   return (
     <GameContext.Provider
       value={{
-        gameState,
+        actions: { buyCard, playCard, start },
+        myId,
+        gameState: {
+          gameState: gamePhase,
+          lastCard,
+          turn,
+          players,
+          state: {
+            cards,
+          },
+        },
         scene,
         setScene,
         wsLastMsg,

@@ -35,6 +35,21 @@ function Lobby() {
             game.setScene("MainMenu");
           }}
         />
+        {game.gameState.players[0].id == game.myId && (
+          <Button
+            x={0}
+            y={510}
+            text={{ text: "Iniciar Jogo" }}
+            width={200}
+            height={50}
+            color="#0d7a25ff"
+            border="rgba(1, 218, 37, 1)"
+            hoverColor="#70ff88ff"
+            onClick={() => {
+              game.actions.start();
+            }}
+          />
+        )}
       </pixiContainer>
     </pixiContainer>
   ) : (
