@@ -32,6 +32,7 @@ function CardSprite({
   };
 
   const height = width * 1.4;
+  const label = num == "10" ? "+2" : num;
 
   return (
     <pixiContainer x={x} y={y} rotation={rotation}>
@@ -56,15 +57,15 @@ function CardSprite({
       />
       {/* Número no canto superior esquerdo */}
       <Text
-        text={num}
+        text={label}
         size={width * 0.2}
         x={-width / 2 + width * 0.15}
         y={-height / 2 + width * 0.1}
       />
-      <Text text={num} size={(65 / 100) * width} x={0} y={0} />
+      <Text text={label} size={(65 / 100) * width} x={0} y={0} />
       {/* Número no canto inferior direito (espelhado) */}
       <Text
-        text={num}
+        text={label}
         size={width * 0.2}
         x={width / 2 - width * 0.15}
         y={height / 2 - width * 0.2}
