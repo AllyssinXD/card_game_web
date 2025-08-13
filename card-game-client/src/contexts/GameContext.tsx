@@ -26,6 +26,7 @@ export interface GameContextProps {
   gameState: GameState;
   myId: string | null;
   actions: GameActions;
+  lastEvent: string;
 }
 
 export interface GameState {
@@ -47,6 +48,7 @@ function GameContextProvider({ children }: { children: ReactNode }) {
   // Estados separados para o game
   const [gamePhase, setGamePhase] = useState<string>("STOP"); // antes gameState.gameState
   const [lastCard, setLastCard] = useState<Card | null>(null);
+  const [lastEvent, setLastEvent] = useState<string>("");
   const [turn, setTurn] = useState<string>("");
   const [players, setPlayers] = useState<Player[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -99,6 +101,7 @@ function GameContextProvider({ children }: { children: ReactNode }) {
     if ("turn" in res) setTurn(res.turn);
     if ("players" in res) setPlayers(res.players);
     if (res.state?.cards) setCards(res.state.cards);
+    if (res.event) setLastEvent(res.event);
   }, [wsLastMsg]);
 
   useEffect(() => {
@@ -112,6 +115,7 @@ function GameContextProvider({ children }: { children: ReactNode }) {
   return (
     <GameContext.Provider
       value={{
+        lastEvent,
         actions: { buyCard, playCard, start },
         myId,
         gameState: {

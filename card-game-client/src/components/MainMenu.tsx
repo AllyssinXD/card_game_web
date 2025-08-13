@@ -13,6 +13,7 @@ extend({ Container, PixiText });
 function MainMenu() {
   const game = useGame();
   const mainTitleRef = useRef<PixiText>(null);
+  const optionsRef = useRef<Container>(null);
   const [username, setUsername] = useState("");
 
   const joinGame = () => {
@@ -52,7 +53,11 @@ function MainMenu() {
             ease: "power1.inOut",
           },
           "<"
-        );
+        )
+        .to(optionsRef.current, {
+          alpha: 1,
+          duration: 0.5,
+        });
     }
   }, []);
 
@@ -73,7 +78,7 @@ function MainMenu() {
           fontFamily: "'Jersey 10', sans serif",
         }}
       />
-      <pixiContainer>
+      <pixiContainer ref={optionsRef} alpha={0}>
         <Text
           text="Insira um apelido :"
           x={window.innerWidth / 2 - 120}

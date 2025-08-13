@@ -118,60 +118,112 @@ function Game() {
   }, [adversary, adversaryHover]);
 
   const [sendingCard, setSendingCard] = useState<{
-    x: number;
-    y: number;
+    originX: number;
+    originY: number;
+    desX: number;
+    desY: number;
     color: Card["color"];
     num: string;
     cardData: Card;
     rotation: number;
   } | null>(null);
+
   const cardsRefs = useRef<Record<string, Container | null>>({});
   const sendingCardRef = useRef<Container>(null);
 
   useEffect(() => {
     if (sendingCardRef.current && sendingCard) {
       const tl = gsap.timeline();
-      tl.to(sendingCardRef.current.scale, {
-        x: 1.5,
-        y: 1.5,
-        duration: 0.5,
-        ease: "power2.inOut",
-      }).to(
-        sendingCardRef.current,
-        {
-          x: viewport.w / 2,
-          y: viewport.h / 2,
+      if (
+        sendingCard.desX == viewport.w / 2 &&
+        sendingCard.desY == viewport.h / 2
+      ) {
+        tl.to(sendingCardRef.current.scale, {
+          x: 1.5,
+          y: 1.5,
           duration: 0.5,
-          rotation: sendingCard.rotation,
           ease: "power2.inOut",
-          onComplete: () => {
-            setShowingLastCard({
-              ...sendingCard.cardData,
-              angle: sendingCard.rotation, // mantém no estado
-            });
-            setSendingCard(null);
+        }).to(
+          sendingCardRef.current,
+          {
+            x: sendingCard.desX,
+            y: sendingCard.desY,
+            duration: 0.5,
+            rotation: sendingCard.rotation,
+            ease: "power2.inOut",
+            onComplete: () => {
+              setShowingLastCard({
+                ...sendingCard.cardData,
+                angle: sendingCard.rotation, // mantém no estado
+              });
+              setSendingCard(null);
+            },
           },
+          "<"
+        );
+        return;
+      }
+
+      tl.to(sendingCardRef.current, {
+        x: sendingCard.desX,
+        y: sendingCard.desY,
+        duration: 0.5,
+        rotation: sendingCard.rotation,
+        ease: "power2.inOut",
+        onComplete: () => {
+          setSendingCard(null);
         },
-        "<"
-      );
+      });
     }
   }, [sendingCard]);
 
   useEffect(() => {
     if (game.gameState.lastCard) {
       setLastCard(game.gameState.lastCard);
-      if (game.gameState.turn == game.myId) {
+    }
+  }, [game.gameState.lastCard]);
+
+  useEffect(() => {
+    if (game.lastEvent.startsWith("BUYED_")) {
+      const id = game.lastEvent.substring(6);
+      if (id == adversary?.id) {
+        const secretCard: Card = {
+          color: "UNKNOWN",
+          id: game.lastEvent,
+          num: "?",
+        };
         setSendingCard({
-          x: viewport.w / 2,
-          y: 100,
-          color: game.gameState.lastCard.color,
-          num: game.gameState.lastCard.num,
-          cardData: game.gameState.lastCard,
-          rotation: (Math.random() * 30 - 15) * (Math.PI / 180), // já salva aqui
+          cardData: secretCard,
+          color: secretCard.color,
+          num: secretCard.num,
+          rotation: 0,
+          originX: viewport.w / 2 - 120,
+          originY: viewport.h / 2,
+          desX: viewport.w / 2,
+          desY: 100,
         });
       }
     }
-  }, [game.gameState.lastCard]);
+
+    if (game.lastEvent.startsWith("PLAYED_")) {
+      const params = game.lastEvent.split("_");
+      const playerId = params[1];
+
+      if (playerId != game.myId) {
+        if (!lastCard) return;
+        setSendingCard({
+          cardData: lastCard,
+          color: lastCard.color,
+          num: lastCard.num,
+          rotation: 0,
+          originX: viewport.w / 2 - 120,
+          originY: 100,
+          desX: viewport.w / 2,
+          desY: viewport.h / 2,
+        });
+      }
+    }
+  }, [game.lastEvent]);
 
   return (
     <>
@@ -242,61 +294,72 @@ function Game() {
       </pixiContainer>
 
       {/* Mão do jogador */}
-      <pixiContainer ref={playerContainer} y={viewport.h - 100}>
-        {cards.map((card, i) => {
-          return (
-            <pixiContainer
-              ref={(el) => {
-                cardsRefs.current[card.id] = el;
-              }}
-              key={card.id ?? `card-${i}`}
-              interactive
-              // Evita ações fora do turno
-              onPointerDown={() => {
-                if (!canPlay) return;
-                if (!card?.id) return;
+      <pixiContainer
+        ref={playerContainer}
+        y={viewport.h - 100}
+        x={viewport.w / 2}
+      >
+        <pixiContainer
+          x={playerContainer.current ? -(playerContainer.current.width / 2) : 0}
+        >
+          {cards.map((card, i) => {
+            return (
+              <pixiContainer
+                ref={(el) => {
+                  cardsRefs.current[card.id] = el;
+                }}
+                key={card.id ?? `card-${i}`}
+                interactive
+                // Evita ações fora do turno
+                onPointerDown={() => {
+                  if (!canPlay) return;
+                  if (!card?.id) return;
 
-                try {
-                  actions?.playCard?.(card.id);
-                } catch (e) {
-                  console.error("Falha ao jogar carta:", e);
-                }
+                  try {
+                    actions?.playCard?.(card.id);
+                  } catch (e) {
+                    console.error("Falha ao jogar carta:", e);
+                  }
 
-                if (
-                  card.num == showingLastCard?.num ||
-                  card.color == showingLastCard?.color
-                ) {
-                  setSendingCard({
-                    x: cardsRefs.current[card.id]!.getGlobalPosition().x,
-                    y: viewport.h - 100,
-                    color: card.color,
-                    num: card.num,
-                    cardData: card,
-                    rotation: (Math.random() * 30 - 15) * (Math.PI / 180), // já salva aqui
-                  });
-                }
-              }}
-              alpha={canPlay ? 1 : 0.6}
-              x={100 + i * marginCard}
-            >
-              <CardSprite
-                x={0}
-                y={0}
-                width={playerCardSize}
-                color={card.color}
-                num={card.num}
-                id={card.id}
-              />
-            </pixiContainer>
-          );
-        })}
-        <Text text="Você" y={70} x={100} />
+                  if (
+                    card.num == showingLastCard?.num ||
+                    card.color == showingLastCard?.color
+                  ) {
+                    setSendingCard({
+                      desX: viewport.w / 2,
+                      desY: viewport.h / 2,
+                      originX:
+                        cardsRefs.current[card.id]!.getGlobalPosition().x,
+                      originY: viewport.h - 100,
+                      color: card.color,
+                      num: card.num,
+                      cardData: card,
+                      rotation: (Math.random() * 30 - 15) * (Math.PI / 180), // já salva aqui
+                    });
+                  }
+                }}
+                alpha={canPlay ? 1 : 0.6}
+                x={i * marginCard}
+              >
+                <CardSprite
+                  x={0}
+                  y={0}
+                  width={playerCardSize}
+                  color={card.color}
+                  num={card.num}
+                  id={card.id}
+                />
+              </pixiContainer>
+            );
+          })}
+          <Text text="Você" y={70} x={0} />
+        </pixiContainer>
       </pixiContainer>
       {sendingCard && (
         <pixiContainer
           ref={sendingCardRef}
-          x={sendingCard.x}
-          y={sendingCard.y}
+          x={sendingCard.originX}
+          y={sendingCard.originY}
           zIndex={5}
         >
           <CardSprite
