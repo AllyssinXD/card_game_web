@@ -145,8 +145,15 @@ export default function VisualStateProvider({
                 }}
                 x={positions[i].x}
                 y={positions[i].y}
+                rotation={
+                  playersAtOrder.length === 5 && i === 3
+                    ? Math.PI * 0.5
+                    : playersAtOrder.length === 5 && i === 4
+                    ? Math.PI * -0.5
+                    : 0
+                }
               >
-                <pixiContainer anchor={0.5}>
+                <pixiContainer>
                   <PlayerHand
                     player={player}
                     cardRefs={cardsRefs}
