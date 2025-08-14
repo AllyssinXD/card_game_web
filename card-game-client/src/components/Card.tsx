@@ -35,7 +35,7 @@ function CardSprite({
   const label = num == "10" ? "+2" : num;
 
   return (
-    <pixiContainer x={x} y={y} rotation={rotation}>
+    <pixiContainer anchor={0.5} x={x} y={y} rotation={rotation}>
       {/* Sombra da carta */}
       <pixiGraphics
         draw={(g) => {
