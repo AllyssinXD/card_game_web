@@ -1,22 +1,36 @@
-import type { Container } from "pixi.js";
+import type { Container, ContainerChild } from "pixi.js";
 import {
   createContext,
+  useCallback,
   useEffect,
   useRef,
   useState,
+  type Dispatch,
   type ReactNode,
   type RefObject,
+  type SetStateAction,
 } from "react";
 import useGame from "../hooks/useGame";
 import Text from "../components/common/Text";
 import useViewport from "../hooks/useViewport";
 import type { Player } from "../types/Player";
 import PlayerHand from "../components/PlayerHand";
+import type Card from "../types/Card";
+import Table from "../components/Table";
+import Button from "../components/common/Button";
+import gsap from "gsap";
 
 interface VisualStateContextProps {
-  playersRefs: Record<string, RefObject<Container | null>>;
-  cardsRefs: Record<string, RefObject<Container | null>>;
-  centerCard: RefObject<Container | null>;
+  playersRefs: Record<string, Container<ContainerChild> | null>;
+  cards: Record<string, Container<ContainerChild> | null>;
+  setCard: (key: string, el: Container | null) => void;
+  setPlayerContainer: (key: string, el: Container | null) => void;
+  buyCardRef: Container | null;
+  setBuyCardRef: Dispatch<SetStateAction<Container | null>>;
+  centerCardRef: RefObject<Container | null>;
+  setShowingCenterCard: Dispatch<SetStateAction<Card>>;
+  showingCenterCard: Card;
+  showingPlayerCards: Card[];
 }
 
 export const VisualStateContext = createContext<VisualStateContextProps | null>(
@@ -30,10 +44,52 @@ export default function VisualStateProvider({
 }) {
   const game = useGame();
   const viewport = useViewport();
+  const [playersContainers, setPlayersContainers] = useState<
+    Record<string, Container | null>
+  >({});
+  const setPlayerContainer = useCallback(
+    (key: string, el: Container<ContainerChild> | null) => {
+      if (playersContainers[key] === el) return;
+      setPlayersContainers((prev) => {
+        // evita re-render desnecessário
+        return { ...prev, [key]: el }; // cria novo objeto
+      });
+    },
+    []
+  );
+  const [cards, setCards] = useState<Record<string, Container | null>>({});
 
-  const playersRefs = useRef<Record<string, RefObject<Container | null>>>({});
-  const cardsRefs = useRef<Record<string, RefObject<Container | null>>>({});
-  const centerCard = useRef<Container | null>(null);
+  const setCard = useCallback(
+    (key: string, el: Container<ContainerChild> | null) => {
+      if (el == null) return;
+      setCards((prev) => {
+        if (cards[key] === el) return prev;
+        // evita re-render desnecessário
+        return { ...prev, [key]: el }; // cria novo objeto
+      });
+    },
+    []
+  );
+  const centerCardRef = useRef<Container | null>(null);
+  const [buyCardRef, setBuyCardRef] = useState<Container | null>(null);
+
+  const [showingCenterCard, setShowingCenterCard] = useState<Card>(
+    game?.gameState.lastCard || {
+      color: "UNKNOWN",
+      num: "?",
+      id: "center",
+    }
+  );
+
+  const [showingPlayerCards, setShowingPlayerCards] = useState<Card[]>(
+    game?.gameState.state.cards || [
+      {
+        color: "UNKNOWN",
+        num: "?",
+        id: "center",
+      },
+    ]
+  );
 
   // Estado para renderizar o jogo somente quando estiver pronto
   const [canRender, setCanRender] = useState(false);
@@ -41,6 +97,7 @@ export default function VisualStateProvider({
   useEffect(() => {
     if (game?.gameState.players?.length && game?.gameState.lastCard) {
       setCanRender(true);
+      setShowingCenterCard(game.gameState.lastCard);
     }
   }, [game?.gameState.players, game?.gameState.lastCard]);
 
@@ -48,9 +105,9 @@ export default function VisualStateProvider({
   useEffect(() => {
     const interval = setInterval(() => {
       console.log({
-        playersRefs: playersRefs.current,
-        cardsRefs: cardsRefs.current,
-        centerCard,
+        playersRefs: playersContainers,
+        cardsRefs: cards,
+        centerCardRef,
       });
     }, 5000);
 
@@ -65,7 +122,7 @@ export default function VisualStateProvider({
     game?.gameState.players || []
   );
 
-  useEffect(() => {
+  const handleCalcPositions = () => {
     const players = game?.gameState.players;
     const currentPlayerIndex = players?.findIndex((p) => p.id === game?.myId);
 
@@ -107,32 +164,113 @@ export default function VisualStateProvider({
     if (players.length === 5) {
       positions = [
         { x: viewport.w / 2, y: viewport.h - 50 }, // jogador 0: baixo
-        { x: 400, y: 100 }, // jogador 1: topo esquerda
-        { x: viewport.w - 400, y: 100 }, // jogador 2: topo direita
-        { x: 50, y: viewport.h / 2 }, // jogador 3: lateral esquerda
+        { x: 50, y: viewport.h / 2 }, // jogador 1: lateral esquerda
+        { x: 400, y: 70 }, // jogador 2: topo esquerda
+        { x: viewport.w - 400, y: 70 }, // jogador 3: topo direita
         { x: viewport.w - 50, y: viewport.h / 2 }, // jogador 4: lateral direita
       ];
     }
 
     setPositions(positions);
+  };
+
+  useEffect(() => {
+    handleCalcPositions();
   }, [game?.gameState.players]);
 
-  // Ajusta pivôs dos jogadores
-  useEffect(() => {}, [positions]);
+  useEffect(() => {
+    console.log({
+      playersRefs: playersContainers,
+      cardsRefs: cards,
+      centerCardRef,
+    });
+    console.log(Object.entries(cards).length);
+    if (Object.entries(cards).length == 0) {
+      setCanRender(false);
+      setTimeout(() => {
+        setCanRender(true);
+      }, 1000);
+    }
+    Object.entries(cards).forEach(([cardsRefKey, cardRef]) => {
+      if (!cardRef) return;
+      cardRef.interactive = true;
+      cardRef.removeAllListeners?.("pointerdown"); // evita acumular listeners
+      cardRef.on("pointerdown", () => {
+        const [playerId, , cardId] = cardsRefKey.split("_");
+        if (playerId === game?.myId) {
+          game.actions.playCard(cardId);
+        }
+      });
+    });
+  }, [cards]);
+
+  useEffect(() => {
+    if (!buyCardRef) return;
+    buyCardRef.interactive = true;
+    buyCardRef.onpointerdown = () => {
+      game?.actions.buyCard();
+    };
+  }, [buyCardRef]);
+
+  const handleReload = () => {
+    // desmonta tudo
+    setCanRender(false);
+
+    // reseta os estados
+    setPlayersAtOrder([]);
+    setPlayersContainers({});
+    setCards({});
+    setShowingPlayerCards([]);
+    setShowingCenterCard({
+      color: "UNKNOWN",
+      num: "?",
+      id: "center",
+    });
+    // remonta após 100ms (ou próximo tick)
+    setTimeout(() => {
+      setCanRender(true);
+      handleCalcPositions();
+      setShowingPlayerCards(game!.gameState.state.cards);
+    }, 100);
+  };
+
+  useEffect(() => {
+    if (!game) return;
+    setShowingPlayerCards(game.gameState.state.cards);
+  }, [game?.gameState.state]);
 
   return (
     <VisualStateContext.Provider
       value={{
-        playersRefs: playersRefs.current,
-        cardsRefs: cardsRefs.current,
-        centerCard,
+        setPlayerContainer,
+        setCard,
+        buyCardRef,
+        setBuyCardRef,
+        showingPlayerCards,
+        playersRefs: playersContainers,
+        cards,
+        centerCardRef,
+        showingCenterCard,
+        setShowingCenterCard,
       }}
     >
+      <Button
+        x={120}
+        y={120}
+        color="#0e2755ff"
+        text={{ text: "Reload" }}
+        height={50}
+        width={100}
+        onClick={() => {
+          handleReload();
+        }}
+      />
       {canRender && (
         <>
+          <Table />
           {playersAtOrder.map((player, i) => {
-            if (!playersRefs.current[player.id]) {
-              playersRefs.current[player.id] = { current: null };
+            if (!playersContainers[player.id]) {
+              playersContainers[player.id] = null;
             }
             if (!positions) return null;
 
@@ -140,13 +278,13 @@ export default function VisualStateProvider({
               <pixiContainer
                 key={player.id}
                 ref={(el) => {
-                  playersRefs.current[player.id].current = el;
-                  if (el) el.pivot.set(el?.width / 2, el?.height / 2);
+                  playersContainers[player.id] = el;
+                  if (el) el.pivot.set(el?.width / 2, 0);
                 }}
                 x={positions[i].x}
                 y={positions[i].y}
                 rotation={
-                  playersAtOrder.length === 5 && i === 3
+                  playersAtOrder.length === 5 && i === 1
                     ? Math.PI * 0.5
                     : playersAtOrder.length === 5 && i === 4
                     ? Math.PI * -0.5
@@ -156,19 +294,10 @@ export default function VisualStateProvider({
                 <pixiContainer>
                   <PlayerHand
                     player={player}
-                    cardRefs={cardsRefs}
-                    position={
-                      playersAtOrder.length === 5 && i === 3
-                        ? "left"
-                        : playersAtOrder.length === 5 && i === 4
-                        ? "right"
-                        : playersAtOrder.length === 5 && i === 0
-                        ? "bottom"
-                        : "top"
-                    }
+                    isOfPlayer={player.id == game?.myId}
                   />
                 </pixiContainer>
-                <Text text={player.username} />
+                <Text text={player.username} y={-50} />
               </pixiContainer>
             );
           })}

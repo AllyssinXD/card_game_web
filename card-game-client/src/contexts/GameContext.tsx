@@ -70,6 +70,8 @@ function GameContextProvider({ children }: { children: ReactNode }) {
   };
 
   const playCard = (cardId: string) => {
+    console.log("PLAYING CARD");
+    console.log(cards.find((c) => c.id == cardId));
     sendJsonMessage({ action: "PLAY_" + cardId });
   };
 

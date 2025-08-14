@@ -32,10 +32,10 @@ function CardSprite({
   };
 
   const height = width * 1.4;
-  const label = num == "10" ? "+2" : num;
+  const label = parseInt(num) > 9 ? "+" + (parseInt(num) - 8).toString() : num;
 
   return (
-    <pixiContainer anchor={0.5} x={x} y={y} rotation={rotation}>
+    <pixiContainer x={x} y={y} rotation={rotation}>
       {/* Sombra da carta */}
       <pixiGraphics
         draw={(g) => {
