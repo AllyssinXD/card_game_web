@@ -18,7 +18,6 @@ import PlayerHand from "../components/PlayerHand";
 import type Card from "../types/Card";
 import Table from "../components/Table";
 import Button from "../components/common/Button";
-import gsap from "gsap";
 
 interface VisualStateContextProps {
   playersRefs: Record<string, Container<ContainerChild> | null>;
@@ -117,7 +116,8 @@ export default function VisualStateProvider({
   }, []);
 
   // Posições dos jogadores
-  const [positions, setPositions] = useState<{ x: number; y: number }[]>();
+  const [positions, setPositions] =
+    useState<{ x: number; y: number; location: string }[]>();
   const [playersAtOrder, setPlayersAtOrder] = useState<Player[]>(
     game?.gameState.players || []
   );
@@ -134,40 +134,40 @@ export default function VisualStateProvider({
       ...players.slice(0, currentPlayerIndex),
     ]);
 
-    let positions: { x: number; y: number }[] = [];
+    let positions: { x: number; y: number; location: string }[] = [];
 
     // Posições de acordo com a quantidade de jogadores
     if (players.length === 2) {
       positions = [
-        { x: viewport.w / 2, y: viewport.h - 50 },
-        { x: viewport.w / 2, y: 100 },
+        { x: viewport.w / 2, y: viewport.h - 50, location: "bottom" },
+        { x: viewport.w / 2, y: 100, location: "top" },
       ];
     }
 
     if (players.length === 3) {
       positions = [
-        { x: viewport.w / 2, y: viewport.h - 20 },
-        { x: 300, y: 100 },
-        { x: viewport.w - 300, y: 100 },
+        { x: viewport.w / 2, y: viewport.h - 20, location: "bottom" },
+        { x: 300, y: 100, location: "left-top" },
+        { x: viewport.w - 300, y: 100, location: "right-top" },
       ];
     }
 
     if (players.length === 4) {
       positions = [
-        { x: viewport.w / 2, y: viewport.h - 20 }, // baixo
-        { x: viewport.w - 100, y: viewport.h / 2 }, // direita
-        { x: viewport.w / 2, y: 20 }, // cima
-        { x: 100, y: viewport.h / 2 }, // esquerda
+        { x: viewport.w / 2, y: viewport.h - 20, location: "bottom" }, // baixo
+        { x: viewport.w, y: viewport.h / 2, location: "right" }, // direita
+        { x: viewport.w / 2, y: 100, location: "top" }, // cima
+        { x: 100, y: viewport.h / 2, location: "left" }, // esquerda
       ];
     }
 
     if (players.length === 5) {
       positions = [
-        { x: viewport.w / 2, y: viewport.h - 50 }, // jogador 0: baixo
-        { x: 50, y: viewport.h / 2 }, // jogador 1: lateral esquerda
-        { x: 400, y: 70 }, // jogador 2: topo esquerda
-        { x: viewport.w - 400, y: 70 }, // jogador 3: topo direita
-        { x: viewport.w - 50, y: viewport.h / 2 }, // jogador 4: lateral direita
+        { x: viewport.w / 2, y: viewport.h - 50, location: "bottom" }, // jogador 0: baixo
+        { x: 100, y: viewport.h / 2, location: "left" }, // jogador 1: lateral esquerda
+        { x: 400, y: 70, location: "left-top" }, // jogador 2: topo esquerda
+        { x: viewport.w - 400, y: 70, location: "right-top" }, // jogador 3: topo direita
+        { x: viewport.w - 100, y: viewport.h / 2, location: "right" }, // jogador 4: lateral direita
       ];
     }
 
@@ -283,21 +283,46 @@ export default function VisualStateProvider({
                 }}
                 x={positions[i].x}
                 y={positions[i].y}
-                rotation={
-                  playersAtOrder.length === 5 && i === 1
-                    ? Math.PI * 0.5
-                    : playersAtOrder.length === 5 && i === 4
-                    ? Math.PI * -0.5
-                    : 0
-                }
               >
                 <pixiContainer>
                   <PlayerHand
                     player={player}
                     isOfPlayer={player.id == game?.myId}
+                    location={positions[i].location}
                   />
                 </pixiContainer>
-                <Text text={player.username} y={-50} />
+                <Text
+                  {...{
+                    rotation:
+                      positions[i].location == "left"
+                        ? Math.PI * 0.5
+                        : positions[i].location == "right"
+                        ? Math.PI * -0.5
+                        : 0,
+                    ref: (el: any) => {
+                      if (
+                        positions[i].location == "left" ||
+                        positions[i].location == "right"
+                      )
+                        el?.pivot.set(el.width / 2, el.height / 2);
+                    },
+                  }}
+                  text={player.username}
+                  y={
+                    positions[i].location.includes("top")
+                      ? 50
+                      : positions[i].location == "bottom"
+                      ? -50
+                      : 0
+                  }
+                  x={
+                    positions[i].location == "left"
+                      ? 100
+                      : positions[i].location == "right"
+                      ? -100
+                      : 0
+                  }
+                />
               </pixiContainer>
             );
           })}

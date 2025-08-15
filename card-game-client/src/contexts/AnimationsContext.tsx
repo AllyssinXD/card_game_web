@@ -1,4 +1,4 @@
-import { createContext, useEffect, useLayoutEffect, useState } from "react";
+import { createContext, useEffect, useLayoutEffect } from "react";
 import useVisualState from "../hooks/useVisualState";
 import gsap from "gsap";
 import useGame from "../hooks/useGame";

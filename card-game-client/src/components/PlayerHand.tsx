@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import type { Player } from "../types/Player";
 import CardSprite from "./Card";
 import useViewport from "../hooks/useViewport";
@@ -7,9 +7,11 @@ import useVisualState from "../hooks/useVisualState";
 function PlayerHand({
   player,
   isOfPlayer,
+  location,
 }: {
   player: Player;
   isOfPlayer: boolean;
+  location: string;
 }) {
   const viewport = useViewport();
   const visualState = useVisualState();
@@ -45,7 +47,19 @@ function PlayerHand({
   }, [cards.length, playerCardSize, viewport.w]);
 
   return (
-    <pixiContainer>
+    <pixiContainer
+      ref={(el) => {
+        if (location == "left" || location == "right")
+          el?.pivot.set(el.width / 2, el.height / 2);
+      }}
+      rotation={
+        location == "left"
+          ? Math.PI * 0.5
+          : location == "right"
+          ? Math.PI * -0.5
+          : 0
+      }
+    >
       {!isOfPlayer &&
         Array.from({ length: player.cardsLength }).map((_, i) => {
           return (
