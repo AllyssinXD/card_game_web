@@ -249,6 +249,10 @@ export default function VisualStateProvider({
     setShowingPlayerCards(game.gameState.state.cards);
   };
 
+  useEffect(() => {
+    handleReload();
+  }, [viewport.h, viewport.w]);
+
   return (
     <VisualStateContext.Provider
       value={{

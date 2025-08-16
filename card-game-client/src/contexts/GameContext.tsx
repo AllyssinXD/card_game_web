@@ -106,6 +106,11 @@ function GameContextProvider({ children }: { children: ReactNode }) {
     if ("players" in res) setPlayers(res.players);
     if (res.state?.cards) setCards(res.state.cards);
     if (res.event) setLastEvent(res.event);
+
+    //Tratamento de erros
+    if (res.error) {
+      if (res.error == "GAME-ALREADY-STARTED") setScene("MainMenu");
+    }
   }, [wsLastMsg]);
 
   useEffect(() => {
