@@ -33,18 +33,20 @@ function Button({
       onPointerEnter={() => setIsHover(true)}
       onPointerLeave={() => setIsHover(false)}
       onPointerDown={onClick}
+      x={x}
+      y={y}
     >
       <pixiGraphics
         draw={(g) => {
           g.clear();
           g.fill(isHover ? hoverColor : color);
           border && g.setStrokeStyle({ width: 2, color: border });
-          g.roundRect(x - width / 2, y - height / 2, width, height, 6);
+          g.roundRect(-width / 2, -height / 2, width, height, 6);
           g.endFill();
         }}
         zIndex={0}
       />
-      <Text x={x} y={y} {...text} zIndex={1} />
+      <Text x={0} y={0} {...{ ...{ anchor: 0.5 }, ...text }} zIndex={1} />
     </pixiContainer>
   );
 }
