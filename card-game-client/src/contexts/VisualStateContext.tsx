@@ -30,6 +30,7 @@ interface VisualStateContextProps {
   setShowingCenterCard: Dispatch<SetStateAction<Card>>;
   showingCenterCard: Card;
   showingPlayerCards: Card[];
+  updatePlayerHand: () => void;
 }
 
 export const VisualStateContext = createContext<VisualStateContextProps | null>(
@@ -100,21 +101,6 @@ export default function VisualStateProvider({
     }
   }, [game?.gameState.players, game?.gameState.lastCard]);
 
-  // Log de debug a cada 5 segundos
-  useEffect(() => {
-    const interval = setInterval(() => {
-      console.log({
-        playersRefs: playersContainers,
-        cardsRefs: cards,
-        centerCardRef,
-      });
-    }, 5000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
-
   // Posições dos jogadores
   const [positions, setPositions] =
     useState<{ x: number; y: number; location: string }[]>();
@@ -179,12 +165,6 @@ export default function VisualStateProvider({
   }, [game?.gameState.players]);
 
   useEffect(() => {
-    console.log({
-      playersRefs: playersContainers,
-      cardsRefs: cards,
-      centerCardRef,
-    });
-    console.log(Object.entries(cards).length);
     if (Object.entries(cards).length == 0) {
       setCanRender(false);
       setTimeout(() => {
@@ -213,10 +193,38 @@ export default function VisualStateProvider({
   }, [buyCardRef]);
 
   const handleReload = () => {
-    // desmonta tudo
-    setCanRender(false);
+    Object.values(cards).forEach((c) => {
+      if (!c) return;
+      try {
+        (c as any).removeAllListeners?.();
+      } catch (err) {}
+      try {
+        gsap.killTweensOf(c);
+      } catch (err) {}
+    });
 
-    // reseta os estados
+    Object.values(playersContainers).forEach((c) => {
+      if (!c) return;
+      try {
+        (c as any).removeAllListeners?.();
+      } catch (err) {}
+      try {
+        gsap.killTweensOf(c);
+      } catch (err) {}
+    });
+
+    if (buyCardRef) {
+      try {
+        (buyCardRef as any).removeAllListeners?.();
+      } catch (err) {}
+      try {
+        gsap.killTweensOf(buyCardRef);
+      } catch (err) {}
+      setBuyCardRef(null);
+    }
+
+    // 2) limpar estados locais
+    setCanRender(false);
     setPlayersAtOrder([]);
     setPlayersContainers({});
     setCards({});
@@ -226,22 +234,25 @@ export default function VisualStateProvider({
       num: "?",
       id: "center",
     });
-    // remonta após 100ms (ou próximo tick)
+    centerCardRef.current = null;
+
+    // 3) re-montar após próximo tick (ou delay curto)
     setTimeout(() => {
-      setCanRender(true);
       handleCalcPositions();
-      setShowingPlayerCards(game!.gameState.state.cards);
+      setShowingPlayerCards(game!.gameState.state?.cards || []);
+      setCanRender(true);
     }, 100);
   };
 
-  useEffect(() => {
+  const updatePlayerHand = () => {
     if (!game) return;
     setShowingPlayerCards(game.gameState.state.cards);
-  }, [game?.gameState.state]);
+  };
 
   return (
     <VisualStateContext.Provider
       value={{
+        updatePlayerHand,
         setPlayerContainer,
         setCard,
         buyCardRef,

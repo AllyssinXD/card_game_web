@@ -67,8 +67,6 @@ function PlayerHand({
               ref={(el) => {
                 const key = player.id + "_CARD_" + i;
 
-                console.log("RENDERING " + key);
-
                 // Evita update se o valor não mudou
                 if (!Object.keys(visualState.cards).includes(key)) {
                   visualState.setCard(key, el);
@@ -101,8 +99,6 @@ function PlayerHand({
                   elementIsLikeBefore: visualState.cards[key] == el,
                   alreadyIncluesKey: !!visualState.cards[key],
                 };
-
-                console.log(params);
 
                 // Evita update se o valor não mudou
                 if (!params.alreadyIncluesKey) {
