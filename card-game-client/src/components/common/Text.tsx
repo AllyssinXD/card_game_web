@@ -21,6 +21,7 @@ export const defaultTextStyle = {
 function Text({ text, pixiRef, size, style, ...rest }: TextProps) {
   let textStyle = { ...style, ...defaultTextStyle };
   if (size) textStyle.fontSize = size;
+  if (style?.align) textStyle.align = style.align;
   return (
     <pixiText
       anchor={0.5}

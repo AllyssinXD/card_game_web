@@ -3,6 +3,7 @@ import {
   createContext,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type Dispatch,
@@ -11,13 +12,14 @@ import {
   type SetStateAction,
 } from "react";
 import useGame from "../hooks/useGame";
-import Text from "../components/common/Text";
 import useViewport from "../hooks/useViewport";
 import type { Player } from "../types/Player";
 import PlayerHand from "../components/PlayerHand";
 import type Card from "../types/Card";
 import Table from "../components/Table";
 import Button from "../components/common/Button";
+import type { GameContextProps } from "./GameContext";
+import useGUI from "../hooks/useGUI";
 
 interface VisualStateContextProps {
   playersRefs: Record<string, Container<ContainerChild> | null>;
@@ -44,6 +46,7 @@ export default function VisualStateProvider({
 }) {
   const game = useGame();
   const viewport = useViewport();
+  const gui = useGUI();
   const [playersContainers, setPlayersContainers] = useState<
     Record<string, Container | null>
   >({});
@@ -95,11 +98,15 @@ export default function VisualStateProvider({
   const [canRender, setCanRender] = useState(false);
 
   useEffect(() => {
-    if (game?.gameState.players?.length && game?.gameState.lastCard) {
+    if (game?.gameState.players?.length) {
       setCanRender(true);
-      setShowingCenterCard(game.gameState.lastCard);
     }
-  }, [game?.gameState.players, game?.gameState.lastCard]);
+  }, [game?.gameState.players]);
+
+  useEffect(() => {
+    console.log(game?.gameState.lastCard);
+    if (game?.gameState.lastCard) setShowingCenterCard(game.gameState.lastCard);
+  }, [game?.gameState.lastCard]);
 
   // Posições dos jogadores
   const [positions, setPositions] =
@@ -109,6 +116,27 @@ export default function VisualStateProvider({
   );
 
   const handleCalcPositions = () => {
+    const bottom = {
+      x: viewport.w / 2,
+      y: viewport.h * 0.9 - 20,
+      location: "bottom",
+    };
+    const top = {
+      x: viewport.w / 2,
+      y: viewport.h * 0.1 + 20,
+      location: "top",
+    };
+    const left = {
+      x: viewport.w * 0.05 + 20,
+      y: viewport.h / 2,
+      location: "left",
+    };
+    const right = {
+      x: viewport.w * 0.95 - 20,
+      y: viewport.h / 2,
+      location: "right",
+    };
+
     const players = game?.gameState.players;
     const currentPlayerIndex = players?.findIndex((p) => p.id === game?.myId);
 
@@ -124,36 +152,49 @@ export default function VisualStateProvider({
 
     // Posições de acordo com a quantidade de jogadores
     if (players.length === 2) {
-      positions = [
-        { x: viewport.w / 2, y: viewport.h - 50, location: "bottom" },
-        { x: viewport.w / 2, y: 100, location: "top" },
-      ];
+      positions = [bottom, top];
     }
 
     if (players.length === 3) {
       positions = [
-        { x: viewport.w / 2, y: viewport.h - 20, location: "bottom" },
-        { x: 300, y: 100, location: "left-top" },
-        { x: viewport.w - 300, y: 100, location: "right-top" },
+        bottom,
+        {
+          x: viewport.w * 0.25,
+          y: viewport.h * 0.1 + 20,
+          location: "left-top",
+        },
+        {
+          x: viewport.w * 0.75,
+          y: viewport.h * 0.1 + 20,
+          location: "right-top",
+        },
       ];
     }
 
     if (players.length === 4) {
       positions = [
-        { x: viewport.w / 2, y: viewport.h - 20, location: "bottom" }, // baixo
-        { x: viewport.w, y: viewport.h / 2, location: "right" }, // direita
-        { x: viewport.w / 2, y: 100, location: "top" }, // cima
-        { x: 100, y: viewport.h / 2, location: "left" }, // esquerda
+        bottom, // baixo
+        right, // direita
+        top, // cima
+        left, // esquerda
       ];
     }
 
     if (players.length === 5) {
       positions = [
-        { x: viewport.w / 2, y: viewport.h - 50, location: "bottom" }, // jogador 0: baixo
-        { x: 100, y: viewport.h / 2, location: "left" }, // jogador 1: lateral esquerda
-        { x: 400, y: 70, location: "left-top" }, // jogador 2: topo esquerda
-        { x: viewport.w - 400, y: 70, location: "right-top" }, // jogador 3: topo direita
-        { x: viewport.w - 100, y: viewport.h / 2, location: "right" }, // jogador 4: lateral direita
+        bottom, // jogador 0: baixo
+        left, // jogador 1: lateral esquerda
+        {
+          x: viewport.w * 0.25,
+          y: viewport.h * 0.1 + 20,
+          location: "left-top",
+        }, // jogador 2: topo esquerda
+        {
+          x: viewport.w * 0.75,
+          y: viewport.h * 0.1 + 20,
+          location: "right-top",
+        }, // jogador 3: topo direita
+        right, // jogador 4: lateral direita
       ];
     }
 
@@ -165,6 +206,7 @@ export default function VisualStateProvider({
   }, [game?.gameState.players]);
 
   useEffect(() => {
+    console.log("CARDS CHANGED", cards);
     if (Object.entries(cards).length == 0) {
       setCanRender(false);
       setTimeout(() => {
@@ -174,12 +216,14 @@ export default function VisualStateProvider({
     Object.entries(cards).forEach(([cardsRefKey, cardRef]) => {
       if (!cardRef) return;
       cardRef.interactive = true;
+      console.log("ADDING POINTERDOWN LISTENER", cardsRefKey);
       cardRef.removeAllListeners?.("pointerdown"); // evita acumular listeners
       cardRef.on("pointerdown", () => {
         const [playerId, , cardId] = cardsRefKey.split("_");
         if (playerId === game?.myId) {
           game.actions.playCard(cardId);
         }
+        console.log("CARD CLICKED", playerId, cardId);
       });
     });
   }, [cards]);
@@ -192,57 +236,70 @@ export default function VisualStateProvider({
     };
   }, [buyCardRef]);
 
-  const handleReload = () => {
-    Object.values(cards).forEach((c) => {
-      if (!c) return;
-      try {
-        (c as any).removeAllListeners?.();
-      } catch (err) {}
-      try {
-        gsap.killTweensOf(c);
-      } catch (err) {}
-    });
+  const handleReload = useCallback(
+    (game: GameContextProps) => {
+      Object.values(cards).forEach((c) => {
+        if (!c) return;
+        try {
+          gsap.killTweensOf(c);
+        } catch (err) {}
+      });
 
-    Object.values(playersContainers).forEach((c) => {
-      if (!c) return;
-      try {
-        (c as any).removeAllListeners?.();
-      } catch (err) {}
-      try {
-        gsap.killTweensOf(c);
-      } catch (err) {}
-    });
+      Object.values(playersContainers).forEach((c) => {
+        if (!c) return;
+        try {
+          (c as any).removeAllListeners?.();
+        } catch (err) {}
+        try {
+          gsap.killTweensOf(c);
+        } catch (err) {}
+      });
 
-    if (buyCardRef) {
-      try {
-        (buyCardRef as any).removeAllListeners?.();
-      } catch (err) {}
-      try {
-        gsap.killTweensOf(buyCardRef);
-      } catch (err) {}
-      setBuyCardRef(null);
-    }
+      if (buyCardRef) {
+        try {
+          (buyCardRef as any).removeAllListeners?.();
+        } catch (err) {}
+        try {
+          gsap.killTweensOf(buyCardRef);
+        } catch (err) {}
+        setBuyCardRef(null);
+      }
 
-    // 2) limpar estados locais
-    setCanRender(false);
-    setPlayersAtOrder([]);
-    setPlayersContainers({});
-    setCards({});
-    setShowingPlayerCards([]);
-    setShowingCenterCard({
-      color: "UNKNOWN",
-      num: "?",
-      id: "center",
-    });
-    centerCardRef.current = null;
+      // 2) limpar estados locais
+      setCards({});
+      setPlayersContainers({});
+      setCanRender(false);
+      setPlayersAtOrder([]);
+      setShowingPlayerCards([]);
+      setShowingCenterCard({
+        color: "UNKNOWN",
+        num: "?",
+        id: "center",
+      });
+      centerCardRef.current = null;
 
-    // 3) re-montar após próximo tick (ou delay curto)
-    setTimeout(() => {
-      handleCalcPositions();
-      setShowingPlayerCards(game!.gameState.state?.cards || []);
-      setCanRender(true);
-    }, 100);
-  };
+      // 3) re-montar após próximo tick (ou delay curto)
+      setTimeout(() => {
+        handleCalcPositions();
+        setShowingPlayerCards(game!.gameState.state?.cards || []);
+        console.log(game!.gameState.state?.cards);
+        setShowingCenterCard(game!.gameState.lastCard!);
+        setCanRender(true);
+        Object.entries(cards).forEach(([cardsRefKey, cardRef]) => {
+          if (!cardRef) return;
+          cardRef.interactive = true;
+          console.log(cardRef.eventNames());
+          cardRef.on("pointerdown", () => {
+            const [playerId, , cardId] = cardsRefKey.split("_");
+            if (playerId === game?.myId) {
+              game.actions.playCard(cardId);
+            }
+          });
+        });
+      }, 100);
+    },
+    [cards, playersContainers, buyCardRef, game]
+  );
 
   const updatePlayerHand = () => {
     if (!game) return;
@@ -250,8 +307,61 @@ export default function VisualStateProvider({
   };
 
   useEffect(() => {
-    handleReload();
+    handleReload(game!);
   }, [viewport.h, viewport.w]);
+
+  useEffect(() => {
+    if (game?.scene !== "Game") {
+      // limpa tudo quando sair do jogo
+      handleReload(game!);
+    }
+  }, [game?.scene]);
+
+  useLayoutEffect(() => {
+    const id = gui?.addGUI(
+      <pixiContainer zIndex={999}>
+        <Button
+          x={120}
+          y={120}
+          color="#0e2755ff"
+          text={{ text: "Reload" }}
+          height={50}
+          width={100}
+          onClick={() => {
+            handleReload(game!);
+          }}
+        />
+      </pixiContainer>
+    );
+
+    gui?.addGUI(
+      <pixiContainer zIndex={999}>
+        <Button
+          x={120}
+          y={170}
+          color="#0e5520ff"
+          text={{ text: "DEBUG" }}
+          height={50}
+          width={100}
+          onClick={() => {
+            console.log("DEBUG", {
+              cards,
+              playersContainers,
+              buyCardRef,
+              centerCardRef: centerCardRef.current,
+              showingCenterCard,
+              showingPlayerCards,
+            });
+          }}
+        />
+      </pixiContainer>
+    );
+
+    return () => {
+      // limpa o botão quando desmontar
+      gui?.removeGUI(id!);
+    };
+  }, []);
 
   return (
     <VisualStateContext.Provider
@@ -269,17 +379,6 @@ export default function VisualStateProvider({
         setShowingCenterCard,
       }}
     >
-      <Button
-        x={120}
-        y={120}
-        color="#0e2755ff"
-        text={{ text: "Reload" }}
-        height={50}
-        width={100}
-        onClick={() => {
-          handleReload();
-        }}
-      />
       {canRender && (
         <>
           <Table />
@@ -290,53 +389,11 @@ export default function VisualStateProvider({
             if (!positions) return null;
 
             return (
-              <pixiContainer
-                key={player.id}
-                ref={(el) => {
-                  playersContainers[player.id] = el;
-                  if (el) el.pivot.set(el?.width / 2, 0);
-                }}
-                x={positions[i].x}
-                y={positions[i].y}
-              >
-                <pixiContainer>
-                  <PlayerHand
-                    player={player}
-                    isOfPlayer={player.id == game?.myId}
-                    location={positions[i].location}
-                  />
-                </pixiContainer>
-                <Text
-                  {...{
-                    rotation:
-                      positions[i].location == "left"
-                        ? Math.PI * 0.5
-                        : positions[i].location == "right"
-                        ? Math.PI * -0.5
-                        : 0,
-                    ref: (el: any) => {
-                      if (
-                        positions[i].location == "left" ||
-                        positions[i].location == "right"
-                      )
-                        el?.pivot.set(el.width / 2, el.height / 2);
-                    },
-                  }}
-                  text={player.username}
-                  y={
-                    positions[i].location.includes("top")
-                      ? 50
-                      : positions[i].location == "bottom"
-                      ? -50
-                      : 0
-                  }
-                  x={
-                    positions[i].location == "left"
-                      ? 100
-                      : positions[i].location == "right"
-                      ? -100
-                      : 0
-                  }
+              <pixiContainer x={positions[i].x} y={positions[i].y}>
+                <PlayerHand
+                  player={player}
+                  isOfPlayer={player.id == game?.myId}
+                  location={positions[i].location}
                 />
               </pixiContainer>
             );
