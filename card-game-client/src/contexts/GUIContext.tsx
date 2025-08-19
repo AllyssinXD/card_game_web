@@ -60,36 +60,6 @@ function GUIContextProvider({ children }: { children: ReactNode }) {
         setFocusId,
       }}
     >
-      {adicionalGUI.map((g) => (
-        <pixiContainer key={g.id}>{g.el}</pixiContainer>
-      ))}
-      {/* Debug logs */}
-      <pixiContainer x={viewport.w * 0.1} y={viewport.h * 0.1}>
-        <pixiGraphics
-          draw={(g) => {
-            g.clear();
-            g.beginFill(0x000000, 0.5);
-            g.drawRect(0, 0, 200, 500);
-            g.endFill();
-          }}
-          zIndex={0}
-        />
-        <Text
-          text={game!.logs.join("\n")}
-          x={10}
-          y={10}
-          style={{
-            fill: "#ffffff",
-            fontSize: 16,
-            wordWrap: true,
-            wordWrapWidth: 500,
-            align: "left",
-          }}
-          zIndex={3}
-          size={16}
-          anchor={0}
-        />
-      </pixiContainer>
       {children}
       {/* Overlay > Ver o que está escrevendo */}
       {viewport.w < 1000 && focusId && (
