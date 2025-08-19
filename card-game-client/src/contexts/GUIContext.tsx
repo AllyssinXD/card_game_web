@@ -26,10 +26,9 @@ function GUIContextProvider({ children }: { children: ReactNode }) {
   const [lastKey, setLastKey] = useState<{ key: string; id: number } | null>(
     null
   );
-  const game = useGame();
   const viewport = useViewport();
   const [typingText, setTypingText] = useState("");
-  const [adicionalGUI, setAdicionalGUI] = useState<
+  const [_, setAdicionalGUI] = useState<
     { el: ReactNode; id: string }[]
   >([]);
   const addGUI = (el: ReactNode) => {
