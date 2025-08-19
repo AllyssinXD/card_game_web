@@ -9,7 +9,6 @@ import { VirtualKeyboard } from "../components/common/VirtualKeyboard";
 import Text from "../components/common/Text";
 import useViewport from "../hooks/useViewport";
 import { KeyToText } from "../helpers/TypingFacilities";
-import useGame from "../hooks/useGame";
 
 export interface GUIContextProps {
   focusId: number | null;
