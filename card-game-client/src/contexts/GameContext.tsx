@@ -28,6 +28,7 @@ export interface GameContextProps {
   actions: GameActions;
   lastEvent: string;
   playedCardsHistory: Card[];
+  logs: string[];
 }
 
 export interface GameState {
@@ -55,6 +56,7 @@ function GameContextProvider({ children }: { children: ReactNode }) {
   const [cards, setCards] = useState<Card[]>([]);
   const [myId, setMyId] = useState<string | null>(null);
   const [playedCardsHistory, setPlayedCardsHistory] = useState<Card[]>([]);
+  const [logs, setLogs] = useState<string[]>([]);
 
   const { sendJsonMessage, lastJsonMessage: wsLastMsg } = useWebSocket(
     socketUrl,
@@ -96,6 +98,10 @@ function GameContextProvider({ children }: { children: ReactNode }) {
 
     const res = wsLastMsg as any;
 
+    setLogs((prev) => [
+      ...prev,
+      res.message || res.error || JSON.stringify(res),
+    ]);
     if (res.yourId) {
       setMyId(res.yourId);
     }
@@ -124,6 +130,7 @@ function GameContextProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (lastEvent.startsWith("GAME_STARTED")) {
       setPlayedCardsHistory([]);
+      setLogs([]);
     }
     if (lastEvent.startsWith("PLAYED")) {
       console.log("NEW EVENT");
@@ -134,6 +141,7 @@ function GameContextProvider({ children }: { children: ReactNode }) {
   return (
     <GameContext.Provider
       value={{
+        logs,
         playedCardsHistory,
         lastEvent,
         actions: { buyCard, playCard, start },

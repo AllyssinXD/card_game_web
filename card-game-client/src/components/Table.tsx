@@ -15,10 +15,12 @@ function Table() {
     visualState?.setBuyCardRef(buyCardRef.current);
   }, []);
 
+  if (!visualState) return null;
+
   return (
     <pixiContainer x={viewport.w / 2} y={viewport.h / 2}>
       <pixiContainer key={"CENTER_CARD"} ref={centerCardRef}>
-        <CardSprite x={0} y={0} {...visualState!.showingCenterCard} />
+        <CardSprite x={0} y={0} {...visualState.showingCenterCard} />
       </pixiContainer>
       <pixiContainer ref={buyCardRef} key={"BUY_CARD"}>
         <CardSprite

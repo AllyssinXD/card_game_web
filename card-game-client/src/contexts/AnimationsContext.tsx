@@ -37,7 +37,10 @@ function AnimationsProvider() {
   const addHoverCardAnimation = async () => {
     if (!visualState) return;
     Object.entries(visualState.cards).forEach(([key, card]) => {
+      console.log(card);
       if (!card || card.destroyed) return;
+
+      console.log(card.destroyed, card.uid, key);
 
       card.interactive = true;
 
@@ -56,6 +59,8 @@ function AnimationsProvider() {
       };
 
       // evite adicionar múltiplas vezes: checar se já existem listeners seria ideal
+      card.removeAllListeners("pointerenter");
+      card.removeAllListeners("pointerleave");
       card.addEventListener("pointerenter", onEnter);
       card.addEventListener("pointerleave", onLeave);
     });
@@ -96,6 +101,7 @@ function AnimationsProvider() {
   // Hover nas cartas
   useEffect(() => {
     if (!visualState) return;
+    console.log("ADDING HOVER ANIMATION");
     addHoverCardAnimation();
   }, [visualState?.cards, game?.myId]);
 

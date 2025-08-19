@@ -30,11 +30,13 @@ function Button({
   return (
     <pixiContainer
       interactive
+      eventMode="static"
       onPointerEnter={() => setIsHover(true)}
       onPointerLeave={() => setIsHover(false)}
       onPointerDown={onClick}
       x={x}
       y={y}
+      zIndex={3}
     >
       <pixiGraphics
         draw={(g) => {
@@ -44,9 +46,9 @@ function Button({
           g.roundRect(-width / 2, -height / 2, width, height, 6);
           g.endFill();
         }}
-        zIndex={0}
+        zIndex={2}
       />
-      <Text x={0} y={0} {...{ ...{ anchor: 0.5 }, ...text }} zIndex={1} />
+      <Text x={0} y={0} {...{ ...{ anchor: 0.5 }, ...text }} zIndex={3} />
     </pixiContainer>
   );
 }
